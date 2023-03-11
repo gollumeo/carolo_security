@@ -9,11 +9,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class ProcessController {
 
-    private final Service service;
+    private final AnalyzeService analyzeService;
 
     @GetMapping("/process")
     public ResponseEntity<?> process() {
-        service.captureFromVideo();
+        analyzeService.captureFromVideo();
         return ResponseEntity.ok("In progress...");
     }
 

@@ -36,3 +36,6 @@ out/
 ### VS Code ###
 .vscode/
 /src/main/resources/application.properties
+/video.mp4
+/video2.mp4
+/video3.mp4
