@@ -5,17 +5,15 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.*;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
-import org.bytedeco.javacv.Java2DFrameConverter;
-import org.bytedeco.javacv.OpenCVFrameConverter;
-import org.bytedeco.opencv.opencv_core.IplImage;
 import org.springframework.stereotype.Service;
 
+import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,17 +25,14 @@ public class StorageService {
     private final AmazonS3 amazonS3Client;
     private final String bucketName = "screenshot-ai-citizens";
 
-    public String upload(IplImage receivedUrl) {
+    public String upload(BufferedImage receivedUrl) {
         try {
-
-            byte[] b = receivedUrl.imageData().getStringBytes();
-            BufferedImage im = new Java2DFrameConverter().convert(new OpenCVFrameConverter.ToIplImage().convert(receivedUrl));
-
-
-            InputStream inputStream = new ByteArrayInputStream(im.toString().getBytes());
+            ByteArrayOutputStream os = new ByteArrayOutputStream();
+            ImageIO.write(receivedUrl, "jpg", os);
+            InputStream inputStream = new ByteArrayInputStream(os.toByteArray());
             ObjectMetadata metadata = new ObjectMetadata();
             metadata.setContentType("image/jpg");
-            metadata.setContentLength(b.length);
+            metadata.setContentLength(inputStream.available());
 
             String key = bucketName + UUID.randomUUID() + ".jpg";
             PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName, key, inputStream, metadata).withCannedAcl(CannedAccessControlList.PublicRead);

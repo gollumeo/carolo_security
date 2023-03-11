@@ -1,25 +1,22 @@
 package com.example.demo;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.microsoft.azure.cognitiveservices.vision.computervision.ComputerVisionClient;
 import com.microsoft.azure.cognitiveservices.vision.computervision.ComputerVisionManager;
 import com.microsoft.azure.cognitiveservices.vision.computervision.models.ImageAnalysis;
-import com.microsoft.azure.cognitiveservices.vision.computervision.models.ImageTag;
+import com.microsoft.azure.cognitiveservices.vision.computervision.models.ImageCaption;
 import com.microsoft.azure.cognitiveservices.vision.computervision.models.VisualFeatureTypes;
 import lombok.RequiredArgsConstructor;
-import org.bytedeco.javacv.*;
-import org.bytedeco.opencv.opencv_core.IplImage;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.bytedeco.javacv.FFmpegFrameGrabber;
+import org.bytedeco.javacv.Frame;
+import org.bytedeco.javacv.Java2DFrameConverter;
 
-import javax.swing.*;
-import java.awt.event.WindowEvent;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
-
-import static org.bytedeco.opencv.helper.opencv_imgcodecs.cvSaveImage;
 
 @org.springframework.stereotype.Service
 @RequiredArgsConstructor
@@ -31,9 +28,45 @@ public class Service {
     static String subscriptionKey = "cbc9d195544f46268ad3fcb4b02720f5";
     static String endpoint = "https://test-major-us.cognitiveservices.azure.com/";
 
+    public void captureFromVideo() {
+        new Thread(() -> {
+            try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber("video.mp4")) {
+                grabber.start();
+
+                // Capture frame every 3 seconds
+                int frameInterval = (int) Math.round(grabber.getFrameRate() * 3.0);
+                int frameNumber = 0;
+                while (true) {
+                    grabber.setFrameNumber(frameNumber);
+
+                    try (Java2DFrameConverter converter = new Java2DFrameConverter()) {
+                        Frame frame = grabber.grabImage();
+                        if (frame == null) {
+                            break;
+                        }
+                        BufferedImage image = converter.convert(frame);
+
+                        // Save the image as a JPEG file
+                        File output = new File("frame-" + frameNumber + ".jpg");
+                        ImageIO.write(image, "jpg", output);
+                        System.out.println("Saved " + output);
+                        processResponse(image);
+
+                    }
+
+                    frameNumber += frameInterval;
+                }
+
+                grabber.stop();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
     //schedule every 5 seconds
-    @Scheduled(cron = "*/10 * * * * *")
-    private void extracted() {
+    //@Scheduled(cron = "*/5 * * * * *")
+/*    private void captureFromWebcam() {
         new Thread(() -> {
             try {
                 CanvasFrame canvas = new CanvasFrame("Web Cam");
@@ -61,30 +94,25 @@ public class Service {
                 throw new RuntimeException(e);
             }
         }).start();
-    }
+    }*/
 
-    private void processResponse(IplImage filename) throws JsonProcessingException {
+    private void processResponse(BufferedImage filename) throws JsonProcessingException {
         String url = savePictureToAmazonS3Bucket(filename);
-        String jsonResponse = sendLinkOfAmazonS3PictureToMicrosoftAzureVisionAPI(url);
-        processResponseFromMicrosoftAzureVisionAPI(jsonResponse, url);
+        sendLinkOfAmazonS3PictureToMicrosoftAzureVisionAPI(url);
     }
 
 
     // save the picture to amazon s3 bucket
-    private String savePictureToAmazonS3Bucket(IplImage filename) {
-        // TODO
+    private String savePictureToAmazonS3Bucket(BufferedImage filename) {
         return storageService.upload(filename);
     }
 
     // send the link of the amazon s3 picture to Microsoft Azure Vision API
-    private String sendLinkOfAmazonS3PictureToMicrosoftAzureVisionAPI(String body) {
+    private void sendLinkOfAmazonS3PictureToMicrosoftAzureVisionAPI(String body) {
         // TODO
 
         ComputerVisionClient compVisClient = Authenticate(subscriptionKey, endpoint);
-        ImageAnalysis imageAnalysis = AnalyzeRemoteImage(compVisClient, body);
-
-        assert imageAnalysis != null;
-        return imageAnalysis.toString();
+        AnalyzeRemoteImage(compVisClient, body);
     }
 
     public static ComputerVisionClient Authenticate(String subscriptionKey, String endpoint) {
@@ -92,7 +120,7 @@ public class Service {
     }
 
 
-    public static ImageAnalysis AnalyzeRemoteImage(ComputerVisionClient compVisClient, String url) {
+    public static void AnalyzeRemoteImage(ComputerVisionClient compVisClient, String url) {
         /*
          * Analyze an image from a URL:
          *
@@ -102,7 +130,7 @@ public class Service {
 
         // This list defines the features to be extracted from the image.
         List<VisualFeatureTypes> featuresToExtractFromRemoteImage = new ArrayList<>();
-        featuresToExtractFromRemoteImage.add(VisualFeatureTypes.TAGS);
+        featuresToExtractFromRemoteImage.add(VisualFeatureTypes.DESCRIPTION);
 
         System.out.println("\n\nAnalyzing an image from a URL ..." + url);
 
@@ -111,25 +139,26 @@ public class Service {
             ImageAnalysis analysis = compVisClient.computerVision().analyzeImage().withUrl(url)
                     .withVisualFeatures(featuresToExtractFromRemoteImage).execute();
 
-
             // Display image tags and confidence values.
-            System.out.println("\nTags: ");
-            for (ImageTag tag : analysis.tags()) {
-                System.out.printf("'%s' with confidence %f\n", tag.name(), tag.confidence());
+            for (ImageCaption caption : analysis.description().captions()) {
+                System.out.printf("'%s' with confidence %f\n", caption.text(), caption.confidence());
+
+                if (caption.text().contains("gun") || caption.text().contains("weapon") || caption.text().contains("knife")) {
+                    System.out.println("ALERT");
+                    //sendAlertToAdminPanel(jsonObject);
+                }
             }
 
-            return analysis;
         } catch (Exception e) {
             System.out.println(e.getMessage());
             e.printStackTrace();
         }
 
-        return null;
     }
     // END - Analyze an image from a URL.
 
     // process the response from Microsoft Azure Vision API
-    private void processResponseFromMicrosoftAzureVisionAPI(String jsonResponse, String fileName) throws JsonProcessingException {
+    /*private void processResponseFromMicrosoftAzureVisionAPI(String jsonResponse, String fileName) throws JsonProcessingException {
         // TODO
         // if jsonResponse contains list of defined object like gun, weapon, knife, etc then send alert to the admin panel
         ObjectMapper objectMapper = new ObjectMapper();
@@ -146,7 +175,7 @@ public class Service {
             }
         }
     }
-
+*/
 
     // if response contains list of defined object like gun, weapon, knife, etc then send alert to the admin panel
     // alert should contain the picture link, the time, the location, the object detected
