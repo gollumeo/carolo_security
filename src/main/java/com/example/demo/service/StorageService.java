@@ -34,7 +34,7 @@ public class StorageService {
             metadata.setContentType("image/jpg");
             metadata.setContentLength(inputStream.available());
 
-            String key = bucketName + UUID.randomUUID() + ".jpg";
+            String key = bucketName + "-" + UUID.randomUUID() + ".jpg";
             PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName, key, inputStream, metadata).withCannedAcl(CannedAccessControlList.PublicRead);
             amazonS3Client.putObject(putObjectRequest);
             URL s3Url = amazonS3Client.getUrl(bucketName, key);

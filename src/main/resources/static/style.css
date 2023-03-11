@@ -22,7 +22,7 @@ body {
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
     font-size: 1rem;
     line-height: 1.58;
-    color: #333;
+    color: #fff;
     background-color: #333;
     height: 100%;
 }
@@ -94,19 +94,19 @@ button {
 }
 
 button.default {
-    background-color: rgba(0,255,0);
+    background-color: rgb(40, 89, 165);
     color: rgba(0,0,0);
     box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.12);
 }
 
 button.primary {
-    background-color: rgba(0,255,0);
+    background-color: rgb(40, 89, 165);
     box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.12);
     color: rgba(0,0,0);
 }
 
 button.accent {
-    background-color: rgba(0,255,0);
+    background-color: rgb(40, 89, 165);
     box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.12);
     color:rgba(0,0,0);
 }
@@ -218,12 +218,12 @@ button.accent {
 }
 
 #chat-page .chat-message span {
-    color: #333;
+    color: #fff;
     font-weight: 600;
 }
 
 #chat-page .chat-message p {
-    color: #fff;
+    color: #de2121;
 }
 
 #messageForm .input-group input {
@@ -252,7 +252,7 @@ button.accent {
 .connecting {
     padding-top: 5px;
     text-align: center;
-    color: #777;
+    color: #fff;
     position: absolute;
     top: 65px;
     width: 100%;

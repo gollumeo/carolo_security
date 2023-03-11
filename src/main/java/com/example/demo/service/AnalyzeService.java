@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 import com.example.demo.config.SensitiveWords;
+import com.example.demo.model.JsonResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,7 +19,9 @@ import org.apache.http.util.EntityUtils;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
 import org.bytedeco.javacv.Java2DFrameConverter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
+import org.springframework.stereotype.Service;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -27,15 +30,13 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.List;
 
-@org.springframework.stereotype.Service
+@Service
 @RequiredArgsConstructor
 public class AnalyzeService {
     private final SimpMessageSendingOperations messagingTemplate;
-
     private final StorageService storageService;
-
-    static String subscriptionKey = "cbc9d195544f46268ad3fcb4b02720f5";
-    static String endpoint = "https://test-major-us.cognitiveservices.azure.com/";
+    @Value("${azure.sub.key}")
+    private String subscriptionKey;
 
     public void captureFromVideo() {
         new Thread(() -> {
@@ -78,17 +79,14 @@ public class AnalyzeService {
         AnalyzeRemoteImage(url);
     }
 
-
     // save the picture to amazon s3 bucket
     private String savePictureToAmazonS3Bucket(BufferedImage filename) {
         return storageService.upload(filename);
     }
 
-
     public static ComputerVisionClient Authenticate(String subscriptionKey, String endpoint) {
         return ComputerVisionManager.authenticate(subscriptionKey).withEndpoint(endpoint);
     }
-
 
     public void AnalyzeRemoteImage(String url) {
         HttpClient httpclient = HttpClients.createDefault();
@@ -118,13 +116,13 @@ public class AnalyzeService {
 
                 for (JsonNode denseCaptionResult : denseCaptionResults) {
                     String text = denseCaptionResult.get("text").asText();
+                    double confidence = denseCaptionResult.get("confidence").asDouble();
                     System.out.println(text);
-                    //create a list of words to check for
                     List<String> words = SensitiveWords.sensitivesWords();
 
                     for (String word : words) {
                         if (text.toLowerCase().contains(word.toLowerCase())) {
-                            String jsonResponse = "{\"url\": \"" + url + "\", \"text\": \"" + text + "\"}"; //todo use data model
+                            JsonResponse jsonResponse = JsonResponse.builder().url(url).description(text).confidence(confidence).type(word).build();
                             sendAlertToAdminPanel(jsonResponse);
                         }
                     }
@@ -135,11 +133,11 @@ public class AnalyzeService {
         }
     }
 
-
-    private void sendAlertToAdminPanel(String jsonResponse) {
-        messagingTemplate.convertAndSend("/topic", jsonResponse);
+    private void sendAlertToAdminPanel(JsonResponse jsonResponse) throws JsonProcessingException {
+        // convert jsonResponse to json string
+        ObjectMapper mapper = new ObjectMapper();
+        String response = mapper.writeValueAsString(jsonResponse);
+        messagingTemplate.convertAndSend("/topic", response);
         System.out.println("alert sent to admin panel");
-
-
     }
 }

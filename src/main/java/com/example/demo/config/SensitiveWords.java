@@ -45,7 +45,6 @@ public class SensitiveWords {
         words.add("Extortion");
         words.add("Fraud");
         words.add("Embezzlement");
-        words.add("Cybercrime");
         words.add("Identity theft");
         words.add("Piracy");
         words.add("Money laundering");
@@ -61,7 +60,7 @@ public class SensitiveWords {
         words.add("Misogyny");
         words.add("Child abuse");
         words.add("Elder abuse");
-        words.add("Domestic violence");
+        words.add("Crash");
 
         return words;
     }
