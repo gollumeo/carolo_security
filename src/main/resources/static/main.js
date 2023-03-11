@@ -50,7 +50,6 @@ function onError(error) {
     connectingElement.style.color = 'red';
 }
 
-
 function sendMessage(event) {
     var messageContent = messageInput.value.trim();
     if (messageContent && stompClient) {
@@ -68,25 +67,7 @@ function sendMessage(event) {
 
 function onMessageReceived(payload) {
     console.log("message received");
-    var message = JSON.parse(payload.body);
-
     var messageElement = document.createElement('li');
-
-    if (message.type === 'JOIN') {
-        messageElement.classList.add('event-message');
-        message.content = message.sender + ' joined!';
-    } else if (message.type === 'LEAVE') {
-        messageElement.classList.add('event-message');
-        message.content = message.sender + ' left!';
-    } else {
-        messageElement.classList.add('chat-message');
-
-        var usernameElement = document.createElement('span');
-        var usernameText = document.createTextNode(message.sender);
-        usernameElement.appendChild(usernameText);
-        messageElement.appendChild(usernameElement);
-    }
-
     var textElement = document.createElement('p');
     var messageText = document.createTextNode(payload.body);
     textElement.appendChild(messageText);

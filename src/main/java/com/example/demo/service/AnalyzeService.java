@@ -1,38 +1,35 @@
-package com.example.demo;
+package com.example.demo.service;
 
+import com.example.demo.config.SensitiveWords;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.microsoft.azure.cognitiveservices.vision.computervision.ComputerVisionClient;
 import com.microsoft.azure.cognitiveservices.vision.computervision.ComputerVisionManager;
 import lombok.RequiredArgsConstructor;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
 import org.bytedeco.javacv.Java2DFrameConverter;
+import org.springframework.messaging.simp.SimpMessageSendingOperations;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.net.URI;
-
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.util.EntityUtils;
-import org.springframework.messaging.simp.SimpMessageSendingOperations;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
+import java.util.List;
 
 @org.springframework.stereotype.Service
 @RequiredArgsConstructor
 public class AnalyzeService {
-
     private final SimpMessageSendingOperations messagingTemplate;
 
     private final StorageService storageService;
@@ -42,7 +39,7 @@ public class AnalyzeService {
 
     public void captureFromVideo() {
         new Thread(() -> {
-            try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber("video4.mp4")) {
+            try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber("video.mp4")) {
                 grabber.start();
 
                 // Capture frame every 3 seconds
@@ -78,7 +75,7 @@ public class AnalyzeService {
 
     private void processResponse(BufferedImage filename) throws JsonProcessingException {
         String url = savePictureToAmazonS3Bucket(filename);
-        sendLinkOfAmazonS3PictureToMicrosoftAzureVisionAPI(url);
+        AnalyzeRemoteImage(url);
     }
 
 
@@ -87,12 +84,6 @@ public class AnalyzeService {
         return storageService.upload(filename);
     }
 
-    // send the link of the amazon s3 picture to Microsoft Azure Vision API
-    private void sendLinkOfAmazonS3PictureToMicrosoftAzureVisionAPI(String body) {
-        // TODO
-
-        AnalyzeRemoteImage(body);
-    }
 
     public static ComputerVisionClient Authenticate(String subscriptionKey, String endpoint) {
         return ComputerVisionManager.authenticate(subscriptionKey).withEndpoint(endpoint);
@@ -129,10 +120,10 @@ public class AnalyzeService {
                     String text = denseCaptionResult.get("text").asText();
                     System.out.println(text);
                     //create a list of words to check for
-                    List<String> words = sensitivesWords();
+                    List<String> words = SensitiveWords.sensitivesWords();
 
                     for (String word : words) {
-                        if (text.contains(word)) {
+                        if (text.toLowerCase().contains(word.toLowerCase())) {
                             String jsonResponse = "{\"url\": \"" + url + "\", \"text\": \"" + text + "\"}"; //todo use data model
                             sendAlertToAdminPanel(jsonResponse);
                         }
@@ -144,28 +135,6 @@ public class AnalyzeService {
         }
     }
 
-    private List<String> sensitivesWords() {
-        List<String> words = new ArrayList<>();
-        words.add("gun");
-        words.add("weapon");
-        words.add("knife");
-        words.add("bomb");
-        words.add("explosive");
-        words.add("firearm");
-        words.add("rifle");
-        words.add("pistol");
-        words.add("shotgun");
-        words.add("assault");
-        words.add("machine");
-        words.add("fight");
-        words.add("fighting");
-        words.add("kicking");
-        words.add("punching");
-        words.add("stabbing");
-        words.add("shooting");
-        words.add("shooter");
-        return words;
-    }
 
     private void sendAlertToAdminPanel(String jsonResponse) {
         messagingTemplate.convertAndSend("/topic", jsonResponse);

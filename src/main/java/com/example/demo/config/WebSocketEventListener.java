@@ -1,4 +1,4 @@
-package com.example.demo;
+package com.example.demo.config;
 
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
