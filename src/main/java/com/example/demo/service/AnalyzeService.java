@@ -33,10 +33,15 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class AnalyzeService {
-    private final SimpMessageSendingOperations messagingTemplate;
-    private final StorageService storageService;
+
     @Value("${azure.sub.key}")
     private String subscriptionKey;
+
+    @Value("${azure.endpoint}")
+    private String endpoint;
+
+    private final SimpMessageSendingOperations messagingTemplate;
+    private final StorageService storageService;
 
     public void captureFromVideo() {
         new Thread(() -> {
@@ -92,7 +97,7 @@ public class AnalyzeService {
         HttpClient httpclient = HttpClients.createDefault();
 
         try {
-            URIBuilder builder = new URIBuilder("https://test-major-us.cognitiveservices.azure.com/computervision/imageanalysis:analyze?api-version=2023-02-01-preview");
+            URIBuilder builder = new URIBuilder("https://" + endpoint + "/computervision/imageanalysis:analyze?api-version=2023-02-01-preview");
 
             builder.setParameter("features", "denseCaptions");
             builder.setParameter("language", "en");
