@@ -61,6 +61,7 @@ public class SensitiveWords {
         words.add("Child abuse");
         words.add("Elder abuse");
         words.add("Crash");
+        words.add("Dead");
 
         return words;
     }
