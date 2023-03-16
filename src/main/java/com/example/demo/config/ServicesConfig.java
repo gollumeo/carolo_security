@@ -5,9 +5,14 @@ import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import org.bytedeco.javacv.CanvasFrame;
+import org.bytedeco.javacv.FrameGrabber;
+import org.bytedeco.javacv.OpenCVFrameGrabber;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import javax.swing.*;
 
 @Configuration
 public class ServicesConfig {
@@ -25,7 +30,23 @@ public class ServicesConfig {
                 .withRegion("eu-west-3")
                 .withCredentials(new AWSStaticCredentialsProvider(awsCredentials))
                 .build();
+    }
 
+
+    @Bean
+    public FrameGrabber grabber() throws FrameGrabber.Exception {
+        FrameGrabber grabber = new OpenCVFrameGrabber(0);
+        grabber.start();
+        return grabber;
+    }
+
+    @Bean
+    public CanvasFrame canvas() {
+        CanvasFrame canvas = new CanvasFrame("Webcam");
+        canvas.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        canvas.setAlwaysOnTop(true);
+        canvas.setResizable(true);
+        return canvas;
     }
 
 }

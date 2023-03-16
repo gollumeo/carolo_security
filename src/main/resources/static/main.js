@@ -1,20 +1,13 @@
 'use strict';
 
-var usernamePage = document.querySelector('#username-page');
-var chatPage = document.querySelector('#chat-page');
-var usernameForm = document.querySelector('#usernameForm');
-var messageForm = document.querySelector('#messageForm');
-var messageInput = document.querySelector('#message');
-var messageArea = document.querySelector('#messageArea');
-var connectingElement = document.querySelector('.connecting');
+const usernamePage = document.querySelector('#username-page');
+const chatPage = document.querySelector('#chat-page');
+const usernameForm = document.querySelector('#usernameForm');
+const messageArea = document.querySelector('#messageArea');
+const connectingElement = document.querySelector('.connecting');
 
-var stompClient = null;
-var username = null;
-
-var colors = [
-    '#2196F3', '#32c787', '#00BCD4', '#ff5652',
-    '#ffc107', '#ff85af', '#FF9800', '#39bbb0'
-];
+let stompClient = null;
+let username = null;
 
 function connect(event) {
     username = document.querySelector('#name').value.trim();
@@ -23,7 +16,7 @@ function connect(event) {
         usernamePage.classList.add('hidden');
         chatPage.classList.remove('hidden');
 
-        var socket = new SockJS('/ws');
+        const socket = new SockJS('/ws');
         stompClient = Stomp.over(socket);
 
         stompClient.connect({}, onConnected, onError);
@@ -33,10 +26,7 @@ function connect(event) {
 
 
 function onConnected() {
-// Subscribe to the Public Topic
     stompClient.subscribe('/topic', onMessageReceived);
-
-// Tell your username to the server
     stompClient.send("/app/chat.addUser",
         {},
         JSON.stringify({sender: username, type: 'JOIN'})
@@ -45,39 +35,36 @@ function onConnected() {
 }
 
 
-function onError(error) {
+function onError() {
     connectingElement.textContent = 'Could not connect to WebSocket server. Please refresh this page to try again!';
     connectingElement.style.color = 'red';
 }
 
-function sendMessage(event) {
-    var messageContent = messageInput.value.trim();
-    if (messageContent && stompClient) {
-        var chatMessage = {
-            sender: username,
-            content: messageInput.value,
-            type: 'CHAT'
-        };
-        stompClient.send("/app/chat.sendAdminMessage", {}, JSON.stringify(chatMessage));
-        messageInput.value = '';
-    }
-    event.preventDefault();
-}
-
 
 function onMessageReceived(payload) {
-    console.log("message received");
-    var messageElement = document.createElement('li');
-    var textElement = document.createElement('p');
-    var messageText = document.createTextNode(payload.body);
-    textElement.appendChild(messageText);
+    const payloadBody = JSON.parse(payload.body);
+    const messageElement = document.createElement('li');
 
+    const imageElement = document.createElement('img');
+    imageElement.src = payloadBody.url;
+    imageElement.width = 250;
+    image.style.cursor = 'pointer';
+    //open in new tab
+    imageElement.onclick = function () {
+        window.open(payloadBody.url, '_blank');
+    }
+    messageElement.appendChild(imageElement);
+
+    const textElement = document.createElement('p');
+    textElement.innerText = payloadBody.description;
     messageElement.appendChild(textElement);
+
+    const confidenceElement = document.createElement('p');
+    confidenceElement.innerText = payloadBody.confidence;
+    messageElement.appendChild(confidenceElement);
 
     messageArea.appendChild(messageElement);
     messageArea.scrollTop = messageArea.scrollHeight;
 }
 
-
 usernameForm.addEventListener('submit', connect, true)
-messageForm.addEventListener('submit', sendMessage, true)
