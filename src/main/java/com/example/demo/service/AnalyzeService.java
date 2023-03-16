@@ -8,10 +8,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.springframework.beans.factory.annotation.Value;
@@ -47,9 +47,9 @@ public class AnalyzeService {
     }
 
     private void AnalyzeRemoteImage(String url) {
-        HttpClient httpclient = HttpClients.createDefault();
 
-        try {
+        try (CloseableHttpClient httpclient = HttpClients.createDefault()) {
+
             URIBuilder builder = new URIBuilder("https://" + endpoint + "/computervision/imageanalysis:analyze?api-version=2023-02-01-preview");
 
             builder.setParameter("features", "denseCaptions");
@@ -76,15 +76,11 @@ public class AnalyzeService {
                     String text = denseCaptionResult.get("text").asText();
                     double confidence = denseCaptionResult.get("confidence").asDouble();
                     System.out.println(text);
-                    List<String> words = SensitiveWords.sensitivesWords();
-
                     //todo uncomment this to check if the text contains any of the words in the list
-                    //for (String word : words) {
-                    //if (text.toLowerCase().contains(word.toLowerCase())) {
+                    //processResponse(url, text, confidence); //end todo
+                    //todo comment this to check if the text contains any of the words in the list
                     JsonResponse jsonResponse = JsonResponse.builder().url(url).description(text).confidence(confidence).type(null).build();
-                    sendAlertToAdminPanel(jsonResponse);
-                    //}
-                    //}
+                    sendAlertToAdminPanel(jsonResponse); //end todo
                 }
             }
         } catch (Exception e) {
@@ -92,10 +88,20 @@ public class AnalyzeService {
         }
     }
 
+    private void processResponse(String url, String text, double confidence) throws JsonProcessingException {
+        List<String> words = SensitiveWords.sensitivesWords();
+        for (String word : words) {
+            if (text.toLowerCase().contains(word.toLowerCase())) {
+                JsonResponse jsonResponse = JsonResponse.builder().url(url).description(text).confidence(confidence).type(word).build();
+                System.out.println("Alert sent to admin panel");
+                sendAlertToAdminPanel(jsonResponse);
+            }
+        }
+    }
+
     private void sendAlertToAdminPanel(JsonResponse jsonResponse) throws JsonProcessingException {
         ObjectMapper mapper = new ObjectMapper();
         String response = mapper.writeValueAsString(jsonResponse);
         messagingTemplate.convertAndSend("/topic", response);
-        System.out.println("alert sent to admin panel");
     }
 }
