@@ -17,5 +17,4 @@ public class ProcessController {
         splitVideoService.captureFromVideo();
         return ResponseEntity.ok("In progress...");
     }
-
 }

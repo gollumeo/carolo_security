@@ -48,7 +48,7 @@ function onMessageReceived(payload) {
     const imageElement = document.createElement('img');
     imageElement.src = payloadBody.url;
     imageElement.width = 250;
-    image.style.cursor = 'pointer';
+    imageElement.style.cursor = 'pointer';
     //open in new tab
     imageElement.onclick = function () {
         window.open(payloadBody.url, '_blank');

@@ -32,7 +32,6 @@ public class ServicesConfig {
                 .build();
     }
 
-
     @Bean
     public FrameGrabber grabber() throws FrameGrabber.Exception {
         FrameGrabber grabber = new OpenCVFrameGrabber(0);
